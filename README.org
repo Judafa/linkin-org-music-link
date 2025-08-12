@@ -1,0 +1,2 @@
+This package defines a pdf link in emacs.
+To use this package, also intall [[https://github.com/Judafa/linkin-org][linkin-org]].
