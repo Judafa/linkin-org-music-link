@@ -142,4 +142,4 @@
   (org-add-link-type "mpd" 'org-mpd-open nil))
 
 
-(provide 'linkin-org-mpd-link-type)
+(provide 'linkin-org-mpd-link)
