@@ -6,7 +6,7 @@
 ;; Maintainer: Julien Dallot <judafa@protonmail.com>
 ;; URL: https://github.com/Judafa/linkin-org
 ;; Version: 1.0
-;; Package-Requires: ((emacs "30.1") (pdf-tools "1.1.0"))
+;; Package-Requires: ((emacs "30.1") (linkin-org "1.0"))
 
 ;; This file is not part of GNU Emacs
 
@@ -28,14 +28,20 @@
 
 (require 'ol)
 (require 'dired)
-(require 'pdf-tools)
+(require 'linkin-org)
+(require 'simple-mpc)
+(require 'libmpdee)
+(require 'mingus)
 
 
-(defun org-mpd-open (string-link)
+
+
+
+(defun org-mpd-open (string-link link)
   "STRING-LINK is a string containing the paths to the song (an mp3 file or so, or a .cue file with a trailing /track<number>) as a Lisp list, each song is a string element of the list then ::,then, a timestamp in format readable by mpd, for instance 1:23:45."
   (let* (
-	     (link-parts (split-string string-link "::"))
-	     (songs (read (car link-parts)))
+	 (link-parts (split-string string-link "::"))
+	 (songs (car link-parts))
          (metadata (when (cadr link-parts)
                      (read (cadr link-parts))))
 	     ;; unescape the link
@@ -50,7 +56,7 @@
             (cadr link-parts))))
     ;; (message (concat "song:" (prin1-to-string songs)))
     ;; (simple-mpc-call-mpc nil (cons "add" songs))
-    (apply #'call-process "mpc" nil nil nil (cons "add" songs))))
+    (apply #'call-process "mpc" nil nil nil (cons "add" (list songs)))))
 
 ;; code that takes a mpd entry list (with file, title, etc) and returns the title
 (defun linkin-org-get-mpd-track-title (lst)
@@ -94,30 +100,63 @@
 	 ;; remove any nil element
 	 (list-songs (remove nil list-songs))
 	 ;; reverse the list
-	 (list-songs (reverse list-songs)))
+	 (list-songs list-songs))
     ;; if there are marked songs
     (if list-songs
 	(let
 	    (
 	     ;; get the file name of the first song
-	     (title (if list-songs
-			(linkin-org-get-mpd-track-title (car
-						 (mpd-get-playlist-entry
-						  mpd-inter-conn
-						  (car (last mingus-marked-list))
-						  nil
-						  t))))))
-	 (format
-	  ;; "[[mpd:%s::00:00:00][[music] %s _ 00:00]]"
-	  "[[mpd:%s::00:00:00][[music] %s]]"
-	  (linkin-org-transform-square-brackets (prin1-to-string list-songs))
-	  title))
+	     ;; (title (if list-songs
+	     ;; 		(linkin-org-get-mpd-track-title (car
+	     ;; 						 (mpd-get-playlist-entry
+	     ;; 						  mpd-inter-conn
+	     ;; 						  (car (last mingus-marked-list))
+	     ;; 						  nil
+	     ;; 						  t)
+	     ;; 						 )
+	     ;; 						)
+	     ;; 	      )
+	     ;; 	    )
+	     (tmp-marked-songs mingus-marked-list)
+	     (tmp-list-songs list-songs)
+	     (string-link "")
+	     )
+	  (dolist (song list-songs)
+	    (let*
+		((title (linkin-org-get-mpd-track-title (car (mpd-get-playlist-entry
+							      mpd-inter-conn
+							      (car tmp-marked-songs)
+							      nil
+							      t)
+							     )
+							)
+			)
+		 (song (car tmp-list-songs))
+		 (new-string-link (format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]"
+					  (linkin-org-transform-square-brackets song)
+					  title
+					  )
+				  )
+		 )
+	      (setq string-link (concat string-link new-string-link "\n"))
+	      (setq tmp-marked-songs (cdr tmp-marked-songs))
+	      (setq tmp-list-songs (cdr tmp-list-songs))
+	      )
+	    )
+	  
+	  ;; (format
+	  ;; ;; "[[mpd:%s::00:00:00][[music] %s _ 00:00]]"
+	  ;; "[[mpd:%s::00:00:00][[music] %s]]"
+	  ;; (linkin-org-transform-square-brackets (prin1-to-string list-songs))
+	  ;; title)
+	  string-link
+	  )
       ;; else
       (let (
 	    (track-path (nth 1 (mingus-get-details)))
 	    (title (linkin-org-get-mpd-track-title (mingus-get-details))))
 	;; (format "[[mpd:(\"%s\")::00:00:00][[music] %s _ 00:00]]" track-path title)
-	(format "[[mpd:(\"%s\")::(:timestamp \"00:00:00\")][[music] %s]]" (linkin-org-transform-square-brackets track-path) title)))))
+	(format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]" (linkin-org-transform-square-brackets track-path) title)))))
 
 
 (defun linkin-org-link-mpd-simple-mpc ()
@@ -139,7 +178,23 @@
 
 ;;;; add the link type
 (let ((inhibit-message t)) ;; dont print messages while loading the package
-  (org-add-link-type "mpd" 'org-mpd-open nil))
+  (org-add-link-type "music" 'org-mpd-open nil))
+
+
+;; add the facilities to obtain mpd links
+
+(defun linkin-org-music-link-get (func)
+  (let ((mode (symbol-name major-mode)))
+    (cond
+     ((string= (symbol-name major-mode) "mingus-playlist-mode") (kill-new (linkin-org-lien-mpd-mingus)))
+     ((string= (symbol-name major-mode) "simple-mpc-mode") (kill-new (linkin-org-link-mpd-simple-mpc)))
+     (t (funcall func))
+     )
+    )
+  )
+
+
+(advice-add 'linkin-org-get :around #'linkin-org-music-link-get)
 
 
 (provide 'linkin-org-music-link)
