@@ -6,7 +6,7 @@
 ;; Maintainer: Julien Dallot <judafa@protonmail.com>
 ;; URL: https://github.com/Judafa/linkin-org
 ;; Version: 1.0
-;; Package-Requires: ((emacs "30.1") (linkin-org "1.0"))
+;; Package-Requires: ((emacs "30.1") (linkin-org "1.0") (s "1.30.0") (simple-mpc "1.0") (mingus "1.0") (libmpdee "1.0"))
 
 ;; This file is not part of GNU Emacs
 
@@ -23,8 +23,8 @@
 ;; limitations under the License. 
 
 ;;; Commentary:
-;; linkin-org proposes to access your data with reliable links to place your written notes at the center of your workflow.
-;; The links work fast and are easy to create; most importantly, the links are reliable and can robustly support a whole link-based workflow.
+;; This package defines a music link that adds a music track to the mpd playlist.
+;; The links are meant to be created with the function linkin-org-get defined in the package linkin-org (https://github.com/Judafa/linkin-org)
 
 (require 'ol)
 (require 'dired)
