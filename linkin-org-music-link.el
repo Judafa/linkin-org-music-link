@@ -70,8 +70,7 @@
      ;; else, if there is a 'file elem in the list and if there is a value (a next elem after 'file)
      ((and file-pos (nth (1+ file-pos) lst))
       (let*
-	  (
-	   (file-path (nth (1+ file-pos) lst))
+	  ((file-path (nth (1+ file-pos) lst))
 	   ;; Get the file name from the file path
 	   (file-name (file-name-nondirectory file-path))
 	   ;; get the file name without the extension
@@ -119,51 +118,40 @@
 	     ;; 	    )
 	     (tmp-marked-songs mingus-marked-list)
 	     (tmp-list-songs list-songs)
-	     (string-link "")
-	     )
+	     (string-link ""))
 	  (dolist (song list-songs)
 	    (let*
 		((title (linkin-org-get-mpd-track-title (car (mpd-get-playlist-entry
 							      mpd-inter-conn
 							      (car tmp-marked-songs)
 							      nil
-							      t)
-							     )
-							)
-			)
+							      t))))
 		 (song (car tmp-list-songs))
 		 (new-string-link (format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]"
-					  (linkin-org-transform-square-brackets song)
-					  title
-					  )
-				  )
-		 )
+					  (linkin-org-escape-square-brackets song)
+					  title)))
 	      (setq string-link (concat string-link new-string-link "\n"))
 	      (setq tmp-marked-songs (cdr tmp-marked-songs))
-	      (setq tmp-list-songs (cdr tmp-list-songs))
-	      )
-	    )
+	      (setq tmp-list-songs (cdr tmp-list-songs))))
 	  
 	  ;; (format
 	  ;; ;; "[[mpd:%s::00:00:00][[music] %s _ 00:00]]"
 	  ;; "[[mpd:%s::00:00:00][[music] %s]]"
 	  ;; (linkin-org-transform-square-brackets (prin1-to-string list-songs))
 	  ;; title)
-	  string-link
-	  )
+	  string-link)
       ;; else
       (let (
 	    (track-path (nth 1 (mingus-get-details)))
 	    (title (linkin-org-get-mpd-track-title (mingus-get-details))))
 	;; (format "[[mpd:(\"%s\")::00:00:00][[music] %s _ 00:00]]" track-path title)
-	(format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]" (linkin-org-transform-square-brackets track-path) title)))))
+	(format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]" (linkin-org-escape-square-brackets track-path) title)))))
 
 
 (defun linkin-org-link-mpd-simple-mpc ()
   "Return a link in string form to the current 'simple-mpc' entry."
   (let*
-      (
-       (track-path
+      ((track-path
 	(simple-mpc-query-get-%file%-for-result
 	 (buffer-substring-no-properties (line-beginning-position) (line-end-position))))
 	
@@ -171,7 +159,7 @@
        (title
 	    (file-name-nondirectory (file-name-sans-extension track-path))))
     (format
-     "[[mpd:(\"%s\")::00:00:00][[music] %s]]"
+     "[[music:%s::(:timestamp 00:00:00)][[music] %s]]"
      track-path
      title)))
 
@@ -188,10 +176,7 @@
     (cond
      ((string= (symbol-name major-mode) "mingus-playlist-mode") (kill-new (linkin-org-lien-mpd-mingus)))
      ((string= (symbol-name major-mode) "simple-mpc-mode") (kill-new (linkin-org-link-mpd-simple-mpc)))
-     (t (funcall func))
-     )
-    )
-  )
+     (t (funcall func)))))
 
 
 (advice-add 'linkin-org-get :around #'linkin-org-music-link-get)
