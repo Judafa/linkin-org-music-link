@@ -1,4 +1,4 @@
-;;; linkin-org.el --- an emacs workflow with fast, reliable links -*- lexical-binding: t -*-
+;;; linkin-org.el --- A linkin-org extension that defines links to play music -*- lexical-binding: t -*-
 
 ;; Copyright 2025 Julien Dallot
 
@@ -24,7 +24,10 @@
 
 ;;; Commentary:
 ;; This package defines a music link that adds a music track to the mpd playlist.
-;; The links are meant to be created with the function linkin-org-get defined in the package linkin-org (https://github.com/Judafa/linkin-org)
+;; The links are meant to be created with the function linkin-org-get
+;; defined in the package linkin-org (https://github.com/Judafa/linkin-org)
+
+
 
 (require 'ol)
 (require 'dired)
@@ -34,10 +37,11 @@
 (require 'mingus)
 
 
+;;; Code:
 
 
 
-(defun org-mpd-open (string-link link)
+(defun linkin-org-music-link-open (string-link link)
   "STRING-LINK is a string containing the paths to the song (an mp3 file or so, or a .cue file with a trailing /track<number>) as a Lisp list, each song is a string element of the list then ::,then, a timestamp in format readable by mpd, for instance 1:23:45."
   (let* (
 	 (link-parts (split-string string-link "::"))
@@ -89,17 +93,20 @@
 ;; returns a link in string format towards the mingus entry at point
 (defun linkin-org-lien-mpd-mingus ()
   "Return a link in string format towards the mingus entry at point."
-  (let* (
-	 (list-songs
-	  (mapcar
-	   (lambda (index)
-	     ;; the song normally is the second element
-	     (nth 1 (car (mpd-get-playlist-entry mpd-inter-conn index nil t))))
-	   mingus-marked-list))
-	 ;; remove any nil element
-	 (list-songs (remove nil list-songs))
-	 ;; reverse the list
-	 (list-songs list-songs))
+  (let* 
+      (
+       (list-songs
+	(mapcar
+	 (lambda (index)
+	   ;; the song normally is the second element
+	   (nth 1 (car (mpd-get-playlist-entry mpd-inter-conn index nil t))))
+	 mingus-marked-list))
+       ;; remove any nil element
+       (list-songs (remove nil list-songs))
+       ;; reverse the list
+       (list-songs (reverse list-songs))
+       (tmp-marked-songs (reverse mingus-marked-list))
+       )
     ;; if there are marked songs
     (if list-songs
 	(let
@@ -116,8 +123,7 @@
 	     ;; 						)
 	     ;; 	      )
 	     ;; 	    )
-	     (tmp-marked-songs mingus-marked-list)
-	     (tmp-list-songs list-songs)
+	     ;; (tmp-list-songs list-songs)
 	     (string-link ""))
 	  (dolist (song list-songs)
 	    (let*
@@ -126,13 +132,13 @@
 							      (car tmp-marked-songs)
 							      nil
 							      t))))
-		 (song (car tmp-list-songs))
 		 (new-string-link (format "[[music:%s::(:timestamp 00:00:00)][[music] %s]]"
 					  (linkin-org-escape-square-brackets song)
 					  title)))
-	      (setq string-link (concat string-link new-string-link "\n"))
+	      (setq string-link (concat string-link "\n" new-string-link))
 	      (setq tmp-marked-songs (cdr tmp-marked-songs))
-	      (setq tmp-list-songs (cdr tmp-list-songs))))
+	      )
+	    )
 	  
 	  ;; (format
 	  ;; ;; "[[mpd:%s::00:00:00][[music] %s _ 00:00]]"
@@ -166,7 +172,7 @@
 
 ;;;; add the link type
 (let ((inhibit-message t)) ;; dont print messages while loading the package
-  (org-add-link-type "music" 'org-mpd-open nil))
+  (org-add-link-type "music" 'linkin-org-music-link-open nil))
 
 
 ;; add the facilities to obtain mpd links
