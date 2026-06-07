@@ -40,6 +40,15 @@
 ;;; Code:
 
 
+(defgroup linkin-org-music nil
+  "A package to manage music with org links."
+  :group 'convenience)
+
+(defcustom linkin-org-music-mpd-music-directory "~/Music/"
+  "Directory where mpd looks for music. Default value is probably wrong, change it if needed."
+  :type '(string)
+  :group 'linkin-org-music)
+
 
 (defun linkin-org-music-link-open (string-link link)
   "STRING-LINK is a string containing the paths to the song (an mp3 file or so, or a .cue file with a trailing /track<number>) as a Lisp list, each song is a string element of the list then ::,then, a timestamp in format readable by mpd, for instance 1:23:45."
@@ -174,9 +183,7 @@
 (let ((inhibit-message t)) ;; dont print messages while loading the package
   (org-add-link-type "music" 'linkin-org-music-link-open nil))
 
-
 ;; add the facilities to obtain mpd links
-
 (defun linkin-org-music-link-get (func)
   (let ((mode (symbol-name major-mode)))
     (cond
@@ -184,8 +191,32 @@
      ((string= (symbol-name major-mode) "simple-mpc-mode") (kill-new (linkin-org-link-mpd-simple-mpc)))
      (t (funcall func)))))
 
-
 (advice-add 'linkin-org-get :around #'linkin-org-music-link-get)
 
+;; add the facilities to open a music in dired
+
+(defun linkin-org-music-open-link-in-dired (func link)
+  "if the type of LINK is music, open the link LINK in dired.
+Instead, run function FUNC as a backup."
+  (let* (
+	 (link-type (org-element-property :type link))
+	 )
+    (if 
+	(string= link-type "music")
+	(let*
+	    (
+	     (link-path (car (split-string (org-element-property :path link) "::")))
+	     (absolute-file-path (concat linkin-org-music-mpd-music-directory link-path))
+	     )
+	  ;; open a dired buffer visiting the directory of the file
+	  (dired (file-name-directory absolute-file-path))
+	  ;; go to the line with the opened file in the dired buffer
+	  (dired-goto-file (expand-file-name absolute-file-path))
+	  )
+      (t (funcall func))
+      )
+    )
+  )
+(advice-add 'linkin-org-open-link-in-dired :around #'linkin-org-music-open-link-in-dired)
 
 (provide 'linkin-org-music-link)
